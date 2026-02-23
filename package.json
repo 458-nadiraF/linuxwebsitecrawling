@@ -17,7 +17,12 @@
     "scraping",
     "nodejs",
     "puppeteer",
-    "scrapy"
+    "scrapy",
+    "authentication",
+    "basic-auth",
+    "bearer-token",
+    "cookie-auth",
+    "form-authentication"
   ],
   "author": "Your Name",
   "license": "MIT",

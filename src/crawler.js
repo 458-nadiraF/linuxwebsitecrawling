@@ -23,6 +23,11 @@ class WebCrawler {
             timeout: options.timeout || 30000,
             retries: options.retries || 3,
             concurrent: options.concurrent || 5,
+            // Authentication options
+            auth: options.auth || null, // { type: 'basic'|'bearer'|'cookie'|'form', credentials: {...} }
+            loginUrl: options.loginUrl || null,
+            loginData: options.loginData || null,
+            sessionCookies: options.sessionCookies || null,
             ...options
         };
 
@@ -247,6 +252,9 @@ class WebCrawler {
     }
 
     async makeRequest(url, options = {}) {
+        // Get authentication headers if configured
+        const authHeaders = await this.authenticate();
+        
         const config = {
             method: 'GET',
             url: url,
@@ -257,6 +265,7 @@ class WebCrawler {
                 'Accept-Encoding': 'gzip, deflate',
                 'Connection': 'keep-alive',
                 'Upgrade-Insecure-Requests': '1',
+                ...(authHeaders || {}),
                 ...options.headers
             },
             timeout: this.options.timeout,
@@ -366,6 +375,93 @@ class WebCrawler {
 
     async delay(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    async authenticate() {
+        if (!this.options.auth) return null;
+
+        const { type, credentials } = this.options.auth;
+        
+        try {
+            switch (type) {
+                case 'basic':
+                    return this.authenticateBasic(credentials);
+                case 'bearer':
+                    return this.authenticateBearer(credentials);
+                case 'cookie':
+                    return this.authenticateCookie(credentials);
+                case 'form':
+                    return this.authenticateForm(credentials);
+                default:
+                    this.logger.warn(`Unknown authentication type: ${type}`);
+                    return null;
+            }
+        } catch (error) {
+            this.logger.error(`Authentication failed: ${error.message}`);
+            return null;
+        }
+    }
+
+    authenticateBasic(credentials) {
+        const { username, password } = credentials;
+        if (!username || !password) {
+            throw new Error('Basic auth requires username and password');
+        }
+        const auth = Buffer.from(`${username}:${password}`).toString('base64');
+        return { Authorization: `Basic ${auth}` };
+    }
+
+    authenticateBearer(credentials) {
+        const { token } = credentials;
+        if (!token) {
+            throw new Error('Bearer auth requires token');
+        }
+        return { Authorization: `Bearer ${token}` };
+    }
+
+    async authenticateCookie(credentials) {
+        const { cookies } = credentials;
+        if (!cookies) {
+            throw new Error('Cookie auth requires cookies array or string');
+        }
+        
+        let cookieString;
+        if (Array.isArray(cookies)) {
+            cookieString = cookies.map(cookie => `${cookie.name}=${cookie.value}`).join('; ');
+        } else {
+            cookieString = cookies;
+        }
+        
+        return { Cookie: cookieString };
+    }
+
+    async authenticateForm(credentials) {
+        const { loginUrl, loginData } = credentials;
+        if (!loginUrl || !loginData) {
+            throw new Error('Form auth requires loginUrl and loginData');
+        }
+
+        try {
+            const response = await axios.post(loginUrl, loginData, {
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'User-Agent': this.options.userAgent
+                },
+                maxRedirects: 5,
+                validateStatus: (status) => status >= 200 && status < 400
+            });
+
+            // Extract cookies from response
+            const setCookieHeaders = response.headers['set-cookie'];
+            if (setCookieHeaders && setCookieHeaders.length > 0) {
+                const cookies = setCookieHeaders.map(cookie => cookie.split(';')[0]).join('; ');
+                return { Cookie: cookies };
+            }
+
+            return null;
+        } catch (error) {
+            throw new Error(`Form authentication failed: ${error.message}`);
+        }
     }
 
     async saveData() {

@@ -29,9 +29,65 @@ program
   .option('--screenshots', 'Take screenshots (Puppeteer only)')
   .option('--user-agent <agent>', 'Custom user agent')
   .option('--proxy <proxy>', 'Proxy server')
+  .option('--auth-type <type>', 'Authentication type (basic|bearer|cookie|form)', 'basic')
+  .option('--auth-username <username>', 'Username for authentication')
+  .option('--auth-password <password>', 'Password for authentication')
+  .option('--auth-token <token>', 'Bearer token for authentication')
+  .option('--auth-cookies <cookies>', 'Cookies for authentication (JSON string or semicolon-separated)')
+  .option('--login-url <url>', 'Login URL for form-based authentication')
+  .option('--login-data <data>', 'Login data for form-based authentication (JSON string)')
   .action(async (options) => {
     try {
       console.log(chalk.blue.bold('\n🕷️  Linux Web Crawler Starting...\n'));
+      
+      // Parse authentication options
+      let auth = null;
+      if (options.authType) {
+        switch (options.authType) {
+          case 'basic':
+            if (options.authUsername && options.authPassword) {
+              auth = {
+                type: 'basic',
+                credentials: {
+                  username: options.authUsername,
+                  password: options.authPassword
+                }
+              };
+            }
+            break;
+          case 'bearer':
+            if (options.authToken) {
+              auth = {
+                type: 'bearer',
+                credentials: {
+                  token: options.authToken
+                }
+              };
+            }
+            break;
+          case 'cookie':
+            if (options.authCookies) {
+              auth = {
+                type: 'cookie',
+                credentials: {
+                  cookies: options.authCookies
+                }
+              };
+            }
+            break;
+          case 'form':
+            if (options.loginUrl && options.loginData) {
+              auth = {
+                type: 'form',
+                credentials: {
+                  loginUrl: options.loginUrl,
+                  loginData: JSON.parse(options.loginData)
+                }
+              };
+            }
+            break;
+        }
+      }
       
       const crawler = new WebCrawler({
         maxDepth: parseInt(options.depth),
@@ -42,7 +98,8 @@ program
         delay: parseInt(options.delay),
         respectRobots: options.robots,
         userAgent: options.userAgent,
-        proxy: options.proxy
+        proxy: options.proxy,
+        auth: auth
       });
 
       console.log(chalk.cyan('Configuration:'));

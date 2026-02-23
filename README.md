@@ -18,6 +18,13 @@ This project fulfills all requirements for Quest 4: Crawling from Linux, providi
 2. **Puppeteer Method**: Full browser automation for JavaScript-heavy sites
 3. **Curl Method**: System-level tool integration for maximum performance
 
+### 🔐 Advanced Authentication Support
+- **Basic Authentication**: HTTP Basic Auth with username/password
+- **Bearer Token**: API authentication with tokens
+- **Cookie Authentication**: Session-based authentication
+- **Form-based Authentication**: Login form automation with Puppeteer
+- **Custom Headers**: Support for custom authentication headers
+
 ### 📊 Data Extraction Capabilities
 - **Text Content**: Full page text extraction with smart parsing
 - **Images**: Complete image metadata, URLs, and alt text
@@ -76,6 +83,9 @@ node src/index.js crawl -u "https://example.com" --depth 3 --max-pages 50
 # Crawl with screenshots
 node src/index.js crawl -u "https://example.com" --method puppeteer --screenshots
 
+# Crawl with authentication
+node src/index.js crawl -u "https://protected-site.com" --auth-type basic --auth-username "user" --auth-password "pass"
+
 # Test all methods
 npm test
 
@@ -103,6 +113,16 @@ node src/index.js crawl -u "https://example.com" \
   --delay 1000 \
   --timeout 30000 \
   --respect-robots
+
+# Authentication examples
+node src/index.js crawl -u "https://api.example.com" \
+  --auth-type bearer \
+  --auth-token "your-token"
+
+node src/index.js crawl -u "https://protected-site.com" \
+  --auth-type form \
+  --login-url "https://protected-site.com/login" \
+  --login-data '{"username": "user", "password": "pass"}'
 ```
 
 ### Scheduler Commands
