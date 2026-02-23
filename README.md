@@ -54,8 +54,8 @@ This project fulfills all requirements for Quest 4: Crawling from Linux, providi
 ### Installation
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/linux-web-crawler.git
-cd linux-web-crawler
+git clone https://github.com/458-nadiraF/linuxwebsitecrawling
+cd linuxwebsitecrawling
 
 # Run setup script
 chmod +x setup.sh
