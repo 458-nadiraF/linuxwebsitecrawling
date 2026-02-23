@@ -334,39 +334,3 @@ https://example.com,Example Domain,2024-01-01T12:00:00.000Z,1,0,200
 export DEBUG=crawler:*
 node src/index.js crawl -u "https://example.com"
 ```
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests
-5. Submit a pull request
-
-## 📄 License
-
-MIT License - see [LICENSE](LICENSE) file for details.
-
-## 🎯 Quest 4 Completion
-
-This project successfully fulfills all Quest 4 requirements:
-
-- ✅ **Linux Environment**: Complete Debian/Ubuntu compatibility
-- ✅ **Multiple Methods**: Axios, Puppeteer, and Curl implementations
-- ✅ **Data Extraction**: Text, images, links, and metadata
-- ✅ **Automation**: Cron jobs and scheduler system
-- ✅ **Error Handling**: Robust retry mechanisms and error recovery
-- ✅ **Data Storage**: JSON, CSV, and screenshot formats
-
-## 📚 Additional Resources
-
-- [Setup Guide](PROJECT_SUMMARY.md)
-- [API Documentation](src/index.js)
-- [Configuration Examples](scheduler-config.json)
-- [Docker Setup](Dockerfile)
-
----
-
-**Ready for production use! 🚀**
-
-For support and questions, please open an issue on GitHub.
