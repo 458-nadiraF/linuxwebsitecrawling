@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  crawler:
+    build: .
+    container_name: linux-web-crawler
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+      - ./screenshots:/app/screenshots
+      - ./scheduler-config.json:/app/scheduler-config.json
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=info
+    networks:
+      - crawler-network
+    restart: unless-stopped
+
+  scheduler:
+    build: .
+    container_name: crawler-scheduler
+    command: ["node", "src/scheduler.js", "start"]
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+      - ./screenshots:/app/screenshots
+      - ./scheduler-config.json:/app/scheduler-config.json
+    environment:
+      - NODE_ENV=production
+    networks:
+      - crawler-network
+    restart: unless-stopped
+    depends_on:
+      - crawler
+
+  # Optional: Redis for caching (if needed)
+  redis:
+    image: redis:7-alpine
+    container_name: crawler-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - crawler-network
+    restart: unless-stopped
+
+networks:
+  crawler-network:
+    driver: bridge
+
+volumes:
+  redis-data:

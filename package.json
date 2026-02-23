@@ -1,0 +1,44 @@
+{
+  "name": "linux-web-crawler",
+  "version": "1.0.0",
+  "description": "Advanced web crawling system for Linux with multiple crawling methods, automation, and data processing",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "crawl": "node src/crawler.js",
+    "test": "node src/test-crawler.js",
+    "schedule": "node src/scheduler.js",
+    "logs": "tail -f logs/crawler.log"
+  },
+  "keywords": [
+    "web-crawling",
+    "linux",
+    "automation",
+    "scraping",
+    "nodejs",
+    "puppeteer",
+    "scrapy"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.0",
+    "cheerio": "^1.0.0-rc.12",
+    "puppeteer": "^21.0.0",
+    "winston": "^3.11.0",
+    "csv-writer": "^1.6.0",
+    "commander": "^11.0.0",
+    "chalk": "^4.1.2",
+    "ora": "^5.4.1",
+    "node-cron": "^3.0.2",
+    "user-agents": "^1.0.1446",
+    "proxy-agent": "^6.3.0",
+    "robots-parser": "^3.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

@@ -1,0 +1,82 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# Logs
+logs/
+*.log
+logs/crawler.log
+logs/error.log
+logs/scheduler.log
+logs/cron.log
+logs/setup.log
+
+# Data files
+data/
+data/*.json
+data/*.csv
+data/*.md
+!data/.gitkeep
+
+# Screenshots
+screenshots/
+screenshots/*.png
+screenshots/*.jpg
+!screenshots/.gitkeep
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Config files
+scheduler-config.json
+config.json
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Build outputs
+dist/
+build/
+*.tgz
+
+# Docker
+.dockerignore
+
+# Redis dump
+dump.rdb
+
+# Puppeteer
+.puppeteer/
