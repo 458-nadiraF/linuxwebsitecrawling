@@ -143,68 +143,88 @@ class WebCrawler {
     }
 
     async crawlWithPuppeteer(url, options = {}) {
-        const spinner = ora(`Crawling with Puppeteer: ${url}`).start();
-        let browser;
-        
-        try {
-            browser = await puppeteer.launch({
-                headless: 'new',
-                args: ['--no-sandbox', '--disable-setuid-sandbox']
-            });
+    const spinner = ora(`Crawling with Puppeteer: ${url}`).start();
+    let browser;
+    
+    try {
+        browser = await puppeteer.launch({
+            headless: 'new',
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
+        });
 
-            const page = await browser.newPage();
-            await page.setUserAgent(this.options.userAgent);
-            
-            await page.goto(url, { 
-                waitUntil: 'networkidle2',
-                timeout: this.options.timeout 
-            });
+        const page = await browser.newPage();
+        await page.setUserAgent(this.options.userAgent);
 
-            // Wait for dynamic content
-            await page.waitForTimeout(2000);
+        // ---------- ADD LOGIN STEP IF AUTH PROVIDED ----------
+        if (this.options.auth && this.options.auth.type === 'form') {
+            const { loginUrl, loginData } = this.options.auth.credentials;
+            if (loginUrl && loginData) {
+                console.log(chalk.blue(`Logging in via ${loginUrl}...`));
+                await page.goto(loginUrl, { waitUntil: 'networkidle2' });
+                
+                // Fill the form (adjust selectors based on actual page)
+                await page.type('input[name="username"]', loginData.username);
+                await page.type('input[name="password"]', loginData.password);
+                
+                // Submit and wait for navigation
+                await Promise.all([
+                    page.waitForNavigation({ waitUntil: 'networkidle2' }),
+                    page.click('button[type="submit"]') // or form submit
+                ]);
+                
+                console.log(chalk.green('Login successful.'));
+            }
+        }
+        // --------------------------------------------------------
 
-            const pageData = await page.evaluate(() => {
-                const data = {
-                    title: document.title,
-                    url: window.location.href,
-                    timestamp: new Date().toISOString(),
-                    text: document.body.innerText,
-                    html: document.documentElement.outerHTML,
-                    links: Array.from(document.querySelectorAll('a[href]')).map(a => ({
-                        text: a.textContent.trim(),
-                        url: a.href,
-                        title: a.title
-                    })),
-                    images: Array.from(document.querySelectorAll('img')).map(img => ({
-                        src: img.src,
-                        alt: img.alt,
-                        title: img.title
-                    })),
-                    meta: {
-                        description: document.querySelector('meta[name="description"]')?.content || '',
-                        keywords: document.querySelector('meta[name="keywords"]')?.content || '',
-                        author: document.querySelector('meta[name="author"]')?.content || ''
-                    }
-                };
-                return data;
-            });
+        // Now navigate to the target URL (which may require authentication)
+        await page.goto(url, { 
+            waitUntil: 'networkidle2',
+            timeout: this.options.timeout 
+        });
 
-            // Take screenshot
-            const screenshotPath = path.join(__dirname, '../screenshots', 
-                `${Date.now()}-${pageData.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.png`);
-            await page.screenshot({ path: screenshotPath, fullPage: true });
+        const pageData = await page.evaluate(() => {
+            const data = {
+                title: document.title,
+                url: window.location.href,
+                timestamp: new Date().toISOString(),
+                text: document.body.innerText,
+                html: document.documentElement.outerHTML,
+                links: Array.from(document.querySelectorAll('a[href]')).map(a => ({
+                    text: a.textContent.trim(),
+                    url: a.href,
+                    title: a.title
+                })),
+                images: Array.from(document.querySelectorAll('img')).map(img => ({
+                    src: img.src,
+                    alt: img.alt,
+                    title: img.title
+                })),
+                meta: {
+                    description: document.querySelector('meta[name="description"]')?.content || '',
+                    keywords: document.querySelector('meta[name="keywords"]')?.content || '',
+                    author: document.querySelector('meta[name="author"]')?.content || ''
+                }
+            };
+            return data;
+        });
 
-            this.crawledData.push(pageData);
-            this.visitedUrls.add(url);
+        // Take screenshot
+        const screenshotPath = path.join(__dirname, '../screenshots', 
+            `${Date.now()}-${pageData.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.png`);
+        await page.screenshot({ path: screenshotPath, fullPage: true });
 
-            spinner.succeed(chalk.green(`Puppeteer crawled: ${url}`));
-            this.logger.info(`Puppeteer success: ${url}`, { 
-                title: pageData.title, 
-                links: pageData.links.length,
-                images: pageData.images.length 
-            });
+        this.crawledData.push(pageData);
+        this.visitedUrls.add(url);
 
-            return pageData;
+        spinner.succeed(chalk.green(`Puppeteer crawled: ${url}`));
+        this.logger.info(`Puppeteer success: ${url}`, { 
+            title: pageData.title, 
+            links: pageData.links.length,
+            images: pageData.images.length 
+        });
+
+        return pageData;
 
         } catch (error) {
             spinner.fail(chalk.red(`Puppeteer failed: ${url}`));
