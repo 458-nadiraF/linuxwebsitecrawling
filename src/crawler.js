@@ -143,89 +143,123 @@ class WebCrawler {
     }
 
     async crawlWithPuppeteer(url, options = {}) {
-    const spinner = ora(`Crawling with Puppeteer: ${url}`).start();
-    let browser;
+        const spinner = ora(`Crawling with Puppeteer: ${url}`).start();
+        let browser;
+        
+        try {
+            browser = await puppeteer.launch({
+                headless: 'new',
+                args: ['--no-sandbox', '--disable-setuid-sandbox']
+            });
     
-    try {
-        browser = await puppeteer.launch({
-            headless: 'new',
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
-        });
-
-        const page = await browser.newPage();
-        await page.setUserAgent(this.options.userAgent);
-
-        // ---------- ADD LOGIN STEP IF AUTH PROVIDED ----------
-        if (this.options.auth && this.options.auth.type === 'form') {
-            const { loginUrl, loginData } = this.options.auth.credentials;
-            if (loginUrl && loginData) {
-                console.log(chalk.blue(`Logging in via ${loginUrl}...`));
-                await page.goto(loginUrl, { waitUntil: 'networkidle2' });
-                
-                // Fill the form (adjust selectors based on actual page)
-                await page.type('input[name="username"]', loginData.username);
-                await page.type('input[name="password"]', loginData.password);
-                
-                // Submit and wait for navigation
-                await Promise.all([
-                    page.waitForNavigation({ waitUntil: 'networkidle2' }),
-                    page.click('button[type="submit"]') // or form submit
-                ]);
-                
-                console.log(chalk.green('Login successful.'));
-            }
-        }
-        // --------------------------------------------------------
-
-        // Now navigate to the target URL (which may require authentication)
-        await page.goto(url, { 
-            waitUntil: 'networkidle2',
-            timeout: this.options.timeout 
-        });
-
-        const pageData = await page.evaluate(() => {
-            const data = {
-                title: document.title,
-                url: window.location.href,
-                timestamp: new Date().toISOString(),
-                text: document.body.innerText,
-                html: document.documentElement.outerHTML,
-                links: Array.from(document.querySelectorAll('a[href]')).map(a => ({
-                    text: a.textContent.trim(),
-                    url: a.href,
-                    title: a.title
-                })),
-                images: Array.from(document.querySelectorAll('img')).map(img => ({
-                    src: img.src,
-                    alt: img.alt,
-                    title: img.title
-                })),
-                meta: {
-                    description: document.querySelector('meta[name="description"]')?.content || '',
-                    keywords: document.querySelector('meta[name="keywords"]')?.content || '',
-                    author: document.querySelector('meta[name="author"]')?.content || ''
+            const page = await browser.newPage();
+            await page.setUserAgent(this.options.userAgent);
+    
+            // ---------- ADD LOGIN STEP IF AUTH PROVIDED ----------
+            // ---------- LOGIN STEP WITH ADAPTIVE FIELD DETECTION ----------
+            if (this.options.auth && this.options.auth.type === 'form') {
+                const { loginUrl, loginData } = this.options.auth.credentials;
+                if (loginUrl && loginData) {
+                    console.log(chalk.blue(`Logging in via ${loginUrl}...`));
+                    await page.goto(loginUrl, { waitUntil: 'networkidle2' });
+            
+                    // Determine which credential field is provided (username or email)
+                    const usernameValue = loginData.username || loginData.email;
+                    if (!usernameValue) {
+                        throw new Error('Login data must contain either "username" or "email"');
+                    }
+            
+                    // Try to find email field first, then fallback to username field
+                    let emailField = await page.$('input[name="email"]');
+                    if (!emailField) {
+                        emailField = await page.$('input[name="username"]');
+                    }
+                    if (!emailField) {
+                        throw new Error('Could not find email/username input field on login page');
+                    }
+            
+                    // Find password field (commonly name="password")
+                    const passwordField = await page.$('input[name="password"]');
+                    if (!passwordField) {
+                        throw new Error('Could not find password input field on login page');
+                    }
+            
+                    // Fill the fields
+                    await emailField.type(usernameValue);
+                    await passwordField.type(loginData.password);
+            
+                    // Try to find and click submit button (common selectors)
+                    const submitButton = await page.$('button[type="submit"]') || 
+                                         await page.$('input[type="submit"]') ||
+                                         await page.$('input[value="Login"]');
+                    if (!submitButton) {
+                        throw new Error('Could not find submit button');
+                    }
+            
+                    // Submit and wait for navigation
+                    await Promise.all([
+                        page.waitForNavigation({ waitUntil: 'networkidle2', timeout: this.options.timeout }),
+                        submitButton.click()
+                    ]);
+            
+                    // Verify login succeeded by checking URL
+                    if (page.url().includes('/login')) {
+                        throw new Error('Login failed – still on login page');
+                    }
+                    console.log(chalk.green('Login successful.'));
                 }
-            };
-            return data;
-        });
-
-        // Take screenshot
-        const screenshotPath = path.join(__dirname, '../screenshots', 
-            `${Date.now()}-${pageData.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.png`);
-        await page.screenshot({ path: screenshotPath, fullPage: true });
-
-        this.crawledData.push(pageData);
-        this.visitedUrls.add(url);
-
-        spinner.succeed(chalk.green(`Puppeteer crawled: ${url}`));
-        this.logger.info(`Puppeteer success: ${url}`, { 
-            title: pageData.title, 
-            links: pageData.links.length,
-            images: pageData.images.length 
-        });
-
-        return pageData;
-
+            }
+            // ----------------------------------------------------------------
+    
+            // Now navigate to the target URL (which may require authentication)
+            await page.goto(url, { 
+                waitUntil: 'networkidle2',
+                timeout: this.options.timeout 
+            });
+    
+            const pageData = await page.evaluate(() => {
+                const data = {
+                    title: document.title,
+                    url: window.location.href,
+                    timestamp: new Date().toISOString(),
+                    text: document.body.innerText,
+                    html: document.documentElement.outerHTML,
+                    links: Array.from(document.querySelectorAll('a[href]')).map(a => ({
+                        text: a.textContent.trim(),
+                        url: a.href,
+                        title: a.title
+                    })),
+                    images: Array.from(document.querySelectorAll('img')).map(img => ({
+                        src: img.src,
+                        alt: img.alt,
+                        title: img.title
+                    })),
+                    meta: {
+                        description: document.querySelector('meta[name="description"]')?.content || '',
+                        keywords: document.querySelector('meta[name="keywords"]')?.content || '',
+                        author: document.querySelector('meta[name="author"]')?.content || ''
+                    }
+                };
+                return data;
+            });
+    
+            // Take screenshot
+            const screenshotPath = path.join(__dirname, '../screenshots', 
+                `${Date.now()}-${pageData.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.png`);
+            await page.screenshot({ path: screenshotPath, fullPage: true });
+    
+            this.crawledData.push(pageData);
+            this.visitedUrls.add(url);
+    
+            spinner.succeed(chalk.green(`Puppeteer crawled: ${url}`));
+            this.logger.info(`Puppeteer success: ${url}`, { 
+                title: pageData.title, 
+                links: pageData.links.length,
+                images: pageData.images.length 
+            });
+    
+            return pageData;
+    
         } catch (error) {
             spinner.fail(chalk.red(`Puppeteer failed: ${url}`));
             this.logger.error(`Puppeteer error ${url}: ${error.message}`);
