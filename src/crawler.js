@@ -35,14 +35,14 @@ class WebCrawler {
         this.crawledData = [];
         this.robotsCache = new Map();
         this.sessionCookies = null; // Cache for form auth session cookies
-        
+
         this.logger = this.setupLogger();
         this.setupDirectories();
     }
 
     setupLogger() {
         const logDir = path.join(__dirname, '../logs');
-        
+
         return winston.createLogger({
             level: 'info',
             format: winston.format.combine(
@@ -52,12 +52,12 @@ class WebCrawler {
             ),
             defaultMeta: { service: 'web-crawler' },
             transports: [
-                new winston.transports.File({ 
-                    filename: path.join(logDir, 'error.log'), 
-                    level: 'error' 
+                new winston.transports.File({
+                    filename: path.join(logDir, 'error.log'),
+                    level: 'error'
                 }),
-                new winston.transports.File({ 
-                    filename: path.join(logDir, 'combined.log') 
+                new winston.transports.File({
+                    filename: path.join(logDir, 'combined.log')
                 }),
                 new winston.transports.Console({
                     format: winston.format.combine(
@@ -82,7 +82,7 @@ class WebCrawler {
 
     async crawlWithAxios(url, options = {}) {
         const spinner = ora(`Crawling ${url}`).start();
-        
+
         try {
             if (this.visitedUrls.has(url)) {
                 spinner.succeed(chalk.yellow(`Already visited: ${url}`));
@@ -105,17 +105,17 @@ class WebCrawler {
 
             const response = await this.makeRequest(url);
             const $ = cheerio.load(response.data);
-            
+
             const pageData = this.extractPageData($, url, response);
-            
+
             this.crawledData.push(pageData);
             this.visitedUrls.add(url);
 
             spinner.succeed(chalk.green(`Crawled: ${url}`));
-            this.logger.info(`Successfully crawled: ${url}`, { 
-                title: pageData.title, 
+            this.logger.info(`Successfully crawled: ${url}`, {
+                title: pageData.title,
                 links: pageData.links.length,
-                images: pageData.images.length 
+                images: pageData.images.length
             });
 
             // Crawl linked pages
@@ -123,7 +123,7 @@ class WebCrawler {
                 const links = this.extractLinks($, url);
                 for (const link of links.slice(0, this.options.concurrent)) {
                     await this.delay(this.options.delay);
-                    await this.crawlWithAxios(link, { depth: options.depth - 1 });
+                    await this.crawlWithAxios(link.url, { depth: options.depth - 1 });
                 }
             }
 
@@ -132,13 +132,13 @@ class WebCrawler {
         } catch (error) {
             spinner.fail(chalk.red(`Failed to crawl: ${url}`));
             this.logger.error(`Error crawling ${url}: ${error.message}`);
-            
+
             if (options.retries > 0) {
                 this.logger.info(`Retrying ${url} (${options.retries} attempts left)`);
                 await this.delay(this.options.delay * 2);
                 return this.crawlWithAxios(url, { ...options, retries: options.retries - 1 });
             }
-            
+
             return null;
         }
     }
@@ -146,7 +146,7 @@ class WebCrawler {
     async crawlWithPuppeteer(url, options = {}) {
         const spinner = ora(`Crawling with Puppeteer: ${url}`).start();
         let browser;
-        
+
         try {
             browser = await puppeteer.launch({
                 headless: 'new',
@@ -155,10 +155,10 @@ class WebCrawler {
 
             const page = await browser.newPage();
             await page.setUserAgent(this.options.userAgent);
-            
-            await page.goto(url, { 
+
+            await page.goto(url, {
                 waitUntil: 'networkidle2',
-                timeout: this.options.timeout 
+                timeout: this.options.timeout
             });
 
             // Wait for dynamic content
@@ -191,7 +191,7 @@ class WebCrawler {
             });
 
             // Take screenshot
-            const screenshotPath = path.join(__dirname, '../screenshots', 
+            const screenshotPath = path.join(__dirname, '../screenshots',
                 `${Date.now()}-${pageData.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.png`);
             await page.screenshot({ path: screenshotPath, fullPage: true });
 
@@ -199,10 +199,10 @@ class WebCrawler {
             this.visitedUrls.add(url);
 
             spinner.succeed(chalk.green(`Puppeteer crawled: ${url}`));
-            this.logger.info(`Puppeteer success: ${url}`, { 
-                title: pageData.title, 
+            this.logger.info(`Puppeteer success: ${url}`, {
+                title: pageData.title,
                 links: pageData.links.length,
-                images: pageData.images.length 
+                images: pageData.images.length
             });
 
             return pageData;
@@ -218,7 +218,7 @@ class WebCrawler {
 
     async crawlWithCurl(url) {
         const spinner = ora(`Crawling with curl: ${url}`).start();
-        
+
         try {
             const { exec } = require('child_process');
             const util = require('util');
@@ -238,9 +238,9 @@ class WebCrawler {
             this.visitedUrls.add(url);
 
             spinner.succeed(chalk.green(`Curl crawled: ${url}`));
-            this.logger.info(`Curl success: ${url}`, { 
-                title: pageData.title, 
-                links: pageData.links.length 
+            this.logger.info(`Curl success: ${url}`, {
+                title: pageData.title,
+                links: pageData.links.length
             });
 
             return pageData;
@@ -255,7 +255,7 @@ class WebCrawler {
     async makeRequest(url, options = {}) {
         // Get authentication headers if configured
         const authHeaders = await this.authenticate();
-        
+
         const config = {
             method: 'GET',
             url: url,
@@ -281,7 +281,7 @@ class WebCrawler {
                 return response;
             } catch (error) {
                 if (attempt === this.options.retries) throw error;
-                
+
                 this.logger.warn(`Request attempt ${attempt} failed for ${url}: ${error.message}`);
                 await this.delay(this.options.delay * attempt);
             }
@@ -358,7 +358,7 @@ class WebCrawler {
         try {
             const parsedUrl = new URL(url);
             const robotsUrl = `${parsedUrl.protocol}//${parsedUrl.host}/robots.txt`;
-            
+
             if (this.robotsCache.has(robotsUrl)) {
                 return this.robotsCache.get(robotsUrl).isAllowed(url);
             }
@@ -366,7 +366,7 @@ class WebCrawler {
             const response = await axios.get(robotsUrl);
             const robots = robotsParser(robotsUrl, response.data);
             this.robotsCache.set(robotsUrl, robots);
-            
+
             return robots.isAllowed(url);
         } catch (error) {
             // If robots.txt doesn't exist or can't be parsed, allow crawling
@@ -382,7 +382,7 @@ class WebCrawler {
         if (!this.options.auth) return null;
 
         const { type, credentials } = this.options.auth;
-        
+
         try {
             switch (type) {
                 case 'basic':
@@ -425,14 +425,14 @@ class WebCrawler {
         if (!cookies) {
             throw new Error('Cookie auth requires cookies array or string');
         }
-        
+
         let cookieString;
         if (Array.isArray(cookies)) {
             cookieString = cookies.map(cookie => `${cookie.name}=${cookie.value}`).join('; ');
         } else {
             cookieString = cookies;
         }
-        
+
         return { Cookie: cookieString };
     }
 
@@ -481,7 +481,7 @@ class WebCrawler {
     async saveData() {
         const dataDir = path.join(__dirname, '../data');
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        
+
         // Save as JSON
         const jsonPath = path.join(dataDir, `crawl-data-${timestamp}.json`);
         await fs.writeFile(jsonPath, JSON.stringify(this.crawledData, null, 2));
