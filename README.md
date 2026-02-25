@@ -74,76 +74,149 @@ npm install
 
 ### Basic Usage
 ```bash
-# Basic crawling
-node src/index.js crawl -u "https://example.com"
+# Simple crawl
+node src/index.js crawl -u "https://quotes.toscrape.com/"
 
-# Advanced crawling with custom settings
-node src/index.js crawl -u "https://example.com" --depth 3 --max-pages 50
-
-# Crawl with screenshots
-node src/index.js crawl -u "https://example.com" --method puppeteer --screenshots
-
-# Crawl with authentication
-node src/index.js crawl -u "https://protected-site.com" --auth-type basic --auth-username "user" --auth-password "pass"
-
-# Test all methods
-npm test
-
-# Start scheduler
-node src/scheduler.js start
-```
-
-## 📋 Command Line Interface
-
-### Main Commands
-```bash
 # Show help
 node src/index.js --help
-
-# Crawl a single URL
-node src/index.js crawl -u "https://example.com"
-
-# Crawl with specific method
-node src/index.js crawl -u "https://example.com" --method axios|puppeteer|curl
-
-# Advanced options
-node src/index.js crawl -u "https://example.com" \
-  --depth 3 \
-  --max-pages 50 \
-  --delay 1000 \
-  --timeout 30000 \
-  --respect-robots
-
-# Authentication examples
-node src/index.js crawl -u "https://api.example.com" \
-  --auth-type bearer \
-  --auth-token "your-token"
-
-node src/index.js crawl -u "https://protected-site.com" \
-  --auth-type form \
-  --login-url "https://protected-site.com/login" \
-  --login-data '{"username": "user", "password": "pass"}'
 ```
 
-### Scheduler Commands
-```bash
-# Start scheduler
-node src/scheduler.js start
+## 📋 Try It Out — Copy-Paste Commands
 
-# List jobs
+Below are **ready-to-use commands** you can copy and run directly. All results (JSON + CSV) are saved in the `data/` folder.
+
+> **Windows CMD users:** Use `\"` to escape quotes inside JSON.  
+> **Linux/Mac/Git Bash users:** Use single quotes `'...'` around JSON.
+
+---
+
+### 1️⃣ Basic Crawling (Public Site)
+
+Crawl [quotes.toscrape.com](https://quotes.toscrape.com/) — a public practice site with quotes, authors, and tags.
+
+```bash
+# Simple crawl (1 page)
+node src/index.js crawl -u "https://quotes.toscrape.com/" --depth 0 --max-pages 1
+
+# Crawl with depth (follows links to author/tag pages)
+node src/index.js crawl -u "https://quotes.toscrape.com/" --depth 1 --max-pages 5
+
+# Deeper crawl with more pages
+node src/index.js crawl -u "https://quotes.toscrape.com/" --depth 2 --max-pages 20 --delay 500
+```
+
+---
+
+### 2️⃣ Crawling Methods
+
+```bash
+# Axios (default — fast, lightweight)
+node src/index.js crawl -u "https://quotes.toscrape.com/" --method axios
+
+# Puppeteer (full browser — good for JavaScript-heavy sites)
+node src/index.js crawl -u "https://quotes.toscrape.com/" --method puppeteer --screenshots
+
+# Curl (system-level tool)
+node src/index.js crawl -u "https://quotes.toscrape.com/" --method curl
+```
+
+---
+
+### 3️⃣ Authentication — Form Login
+
+Crawl the [ScrapingCourse dashboard](https://www.scrapingcourse.com/dashboard) which requires login at [scrapingcourse.com/login](https://www.scrapingcourse.com/login).
+
+**Demo credentials:** Email: `admin@example.com` | Password: `password`
+
+**Linux / Mac / Git Bash:**
+```bash
+node src/index.js crawl -u "https://www.scrapingcourse.com/dashboard" \
+  --auth-type form \
+  --login-url "https://www.scrapingcourse.com/login" \
+  --login-data '{"email": "admin@example.com", "password": "password"}'
+```
+
+**Windows CMD:**
+```cmd
+node src/index.js crawl -u "https://www.scrapingcourse.com/dashboard" --auth-type form --login-url "https://www.scrapingcourse.com/login" --login-data "{\"email\": \"admin@example.com\", \"password\": \"password\"}"
+```
+
+**Alternative (no escaping needed):**
+```bash
+node test-form-auth.js
+```
+
+---
+
+### 4️⃣ Authentication — Basic Auth
+
+```bash
+node src/index.js crawl -u "https://httpbin.org/basic-auth/user/pass" --auth-type basic --auth-username user --auth-password pass
+```
+
+---
+
+### 5️⃣ Advanced Options
+
+```bash
+# Custom user agent + ignore robots.txt
+node src/index.js crawl -u "https://quotes.toscrape.com/" --user-agent "MyBot/1.0" --no-robots --depth 1
+
+# High concurrency with short delay
+node src/index.js crawl -u "https://quotes.toscrape.com/" --concurrent 10 --delay 200 --max-pages 30
+
+# Increase timeout and retries
+node src/index.js crawl -u "https://quotes.toscrape.com/" --timeout 60000 --retries 5
+```
+
+---
+
+### 6️⃣ Scheduler — Automated Crawling
+
+```bash
+# Add a job: crawl quotes every 6 hours
+node src/scheduler.js add -n "quotes-crawler" -s "0 */6 * * *" -u "https://quotes.toscrape.com/" -m axios --max-pages 10
+
+# Add a job: crawl every minute (for testing)
+node src/scheduler.js add -n "test-every-minute" -s "* * * * *" -u "https://quotes.toscrape.com/" -m axios --max-pages 3
+
+# Add a daily screenshot job at 9 AM
+node src/scheduler.js add -n "daily-screenshot" -s "0 9 * * *" -u "https://quotes.toscrape.com/" -m puppeteer --max-pages 1
+
+# List all scheduled jobs
 node src/scheduler.js list
 
-# Add job
-node src/scheduler.js add -n "daily-crawl" -s "0 9 * * *" -u "https://example.com"
+# Start the scheduler (runs all enabled jobs)
+node src/scheduler.js start
 ```
 
-### Testing Commands
+**Cron Schedule Cheat Sheet:**
+
+| Schedule | Meaning |
+|----------|---------|
+| `* * * * *` | Every minute (for testing) |
+| `*/5 * * * *` | Every 5 minutes |
+| `0 * * * *` | Every hour |
+| `0 */6 * * *` | Every 6 hours |
+| `0 9 * * *` | Daily at 9:00 AM |
+| `0 9 * * 1` | Every Monday at 9:00 AM |
+
+---
+
+### 7️⃣ Testing
+
 ```bash
-# Run all tests
+# Run built-in test suite
+node src/index.js test
+
+# Comprehensive test suite
 node src/test-crawler.js run
 
-# Test specific URL
-node src/test-crawler.js url -u "https://example.com" -m axios
+# Test a specific URL
+node src/test-crawler.js url -u "https://quotes.toscrape.com/" -m axios
+
+# Simplest possible test
+node src/index.js crawl -u "https://example.com" --depth 0 --max-pages 1
 ```
 
 ## ⚙️ Configuration
